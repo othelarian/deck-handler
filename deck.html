@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {font-size:13px;}
+button {font-size:13px;}
+h1 {margin:13px;}
+h2 {margin:7px;}
+#gened {border: solid 2px royalblue;}
+.card-btn-dn {position:absolute;bottom:0;right:0;}
+.card-btn-up {position:absolute;top:0;right:0;}
+.cdg div {display:inline-block;background:white;vertical-align:top;}
+.excards {border-collapse: collapse;}
+.excards td {text-align: center;border: 1px solid gray;}
+.tbcard {border:solid gray 1px;height:55px;width:55px;margin:4px;position:relative;}
+.tbcard span {font-size:17px;}
+</style>
+<script type="text/javascript">
+function gbID(v) {return document.getElementById(v);}
+function cEl(t,i) {var e = document.createElement(t);if(i!=undefined)e.innerText=i;return e;}
+function togExC() {gbID("excards").style.display = (gbID("excard").checked)? "block":"none";}
+function togActEx() {}
+function rand2(m) {return Math.floor(Math.random()*m);}
+var pack = [];
+function initPack() {
+	pack = [];
+	var f = ["s","c","h","d"];
+	for (var j=0;j<4;j++) for (var i=1;i<14;i++) pack.push(f[j]+((i<11)?i.toString():((i==11)?"J":((i==12)?"Q":"K"))));
+	pack.push("jr");pack.push("jb");
+}
+function cutPack(n) {
+	if (n==0) return pack.shift();
+	if ((n+1)==pack.length) return pack.pop();
+	var ft = pack.splice(n+1);var rt = pack.pop();pack = pack.concat(ft);
+	return rt;
+}
+var deck = {};
+function dumpDeck() {gbID("gened").value = JSON.stringify(deck);}
+function genDeck() {
+	deck = {h:[],d:[],f:[],p:0};
+	for (var i=0;i<54;i++) deck.f.push(rand2(54-i));
+	dumpDeck(); initPack(); clearTable(); updateNb();
+}
+function updateDeck() {
+	initPack(); clearTable(); updateNb();
+	deck = JSON.parse(gbID("gened").value);
+	for (var i=0;i<deck.p;i++) drawCard(deck.f[i]);
+	for (var i=0;i<deck.h.length;i++) inHand(deck.h[i], true);
+	for (var i=0;i<deck.d.length;i++) discardCard(deck.d[i], true);
+	updateNb();
+}
+function renderCard(cd_id,cd_cl,cd_v,cd_s,cd_f,cd_f2) {
+	var drc = cEl("div"); drc.setAttribute("class", "tbcard "+cd_cl); drc.setAttribute("id", cd_id);
+	drc.innerHTML = "<span>"+cd_v+"</span><br/><span>"+cd_s+"</span>";
+	var btn = cEl("button", cd_f[0]); btn.setAttribute("class", "card-btn-up"); btn.setAttribute("onclick", cd_f[1]);drc.append(btn);
+	if (cd_f2 != undefined){btn = cEl("button", cd_f2[0]);btn.setAttribute("class", "card-btn-dn");btn.setAttribute("onclick", cd_f2[1]);drc.append(btn);}
+	gbID("drc").append(drc);
+}
+function drawCard(fake) {
+	if (deck.p==54) return;
+	var drc = cutPack((fake==undefined)?deck.f[deck.p]:fake);
+	var cd_v = "", cd_f = "", cd_f = ["X", "discardCard('"+drc+"');"], cd_f2 = ["H", "inHand('"+drc+"');"];
+	if (drc=="jr" || drc=="jb") {cd_v = (drc=="jr")?"R":"B";cd_s = "J";} else {
+		var s = drc[0];
+		cd_s = "&#x266"+((s=="s")?"0":((s=="c")?"3":(s=="h")?"1":"2"))+";";
+		cd_v = drc.substring(1);
+	}
+	renderCard("cd-"+drc,"drc-crd",cd_v,cd_s,cd_f,cd_f2);
+	if (fake == undefined) {deck.p += 1; dumpDeck(); updateNb();}
+}
+function discardCard(id, fake) {
+	var e = gbID("cd-"+id); gbID("ddis").append(e);
+	var btns = e.getElementsByTagName("button"); while (btns.length > 0) btns[0].remove();
+	var tt = []; for (var i=0;i<deck.h.length;i++) if(deck.h[i]!=id) tt.push(deck.h[i]); deck.h = tt;
+	if (!fake) { deck.d.push(id); dumpDeck(); }
+}
+function inHand(id, fake) {
+	var e = gbID("cd-"+id); gbID("hand").append(e);
+	e.getElementsByTagName("button")[1].remove();
+	if (!fake) { deck.h.push(id); dumpDeck(); }
+}
+function shuffle() {
+	var d = gbID("ddis").getElementsByClassName("drc-crd");
+	while (d.length > 0) d[0].remove();
+	initPack(); var strt = [];
+	var re = document.getElementsByClassName("drc-crd");
+	var rc = []; for (var i=0;i<re.length;i++) rc.push(re[i].id.substring(3));
+	for (var i=0;i<rc.length;i++) {for (var j=0;j<pack.length;j++) {if (rc[i]==pack[j]) {cutPack(j);strt.push(j);break;}}}
+	deck.p = strt.length;
+	for (var i=0;i<(54-deck.p);i++) strt.push(rand2(54-deck.p-i));
+	deck.f = strt; dumpDeck(); updateNb();
+}
+function updateNb() {gbID("nb-cds").innerText = (deck.p==54)?"No card left!":(54-deck.p);}
+function clearTable() {
+	var d = document.getElementsByClassName("drc-crd");
+	while (d.length > 0) d[0].remove();
+}
+function initPage() {genDeck();}
+</script>
+</head>
+<body onload="initPage();">
+<h1>Deck Handler</h1>
+<h2>Why?</h2>
+<p>I wanted to test playing TTRPG with cards, but don't want to rely on multiple physical deck. So I searched for an app on Android or on the web, asking reddit for help. Some suggestion were very good, but I was still looking for something really specific. So I decided to write my own html file with everything I want into. I know this deck handler is strongly specific, but it perfectly fits my need. Feel free to use it, and if you like it, it's great!</p>
+<h2>How to use</h2>
+<ul>
+<li>Everytime the page is loaded a new deck is generated.</li>
+<li>If you want to generate a new deck, there's a button for that.</li>
+<li>To save a deck, the current hand, discard cards, etc, copy the content in the textarea (the blue bordered zone).</li>
+<li>To load a previously saved deck, paste the code in the textarea (the still blue bordered zone) and use the button below ("update deck with input").</li>
+<li>To draw a card, use the namely button, to discard a card, use the "X" button on the card, and to put a card in your hand, use the "H" button.</li>
+<li>The shuffle only act with the still flipped cards and the discarded one, not the full deck. If you want to shuffle the entire deck, why don't you generate a new one? It's the same process.</li>
+<li>"BJ" and "RJ" cards are respectively for "Black Joker" and "Red Joker".</li>
+</ul>
+<p style="display:none;">Exclude cards? <input type="checkbox" onclick="togExC();" id="excard"/><label for="excard">Yes</label></p>
+<div id="excards" style="display:none;">
+<table class="excards">
+<tr><td></td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>J</td><td>Q</td><td>K</td></tr>
+<tr>
+<td>&#x2660;</td>
+<td><input type="checkbox" id="exc_s1" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s2" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s3" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s4" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s5" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s6" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s7" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s8" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s9" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_s10" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_sJ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_sQ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_sK" onclick="togActEx();"/></td>
+</tr>
+<tr>
+<td>&#x2663;</td>
+<td><input type="checkbox" id="exc_c1" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c2" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c3" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c4" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c5" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c6" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c7" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c8" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c9" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_c10" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_cJ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_cQ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_cK" onclick="togActEx();"/></td>
+</tr>
+<tr>
+<td>&#x2661;</td>
+<td><input type="checkbox" id="exc_h1" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h2" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h3" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h4" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h5" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h6" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h7" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h8" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h9" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_h10" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_hJ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_hQ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_hK" onclick="togActEx();"/></td>
+</tr>
+<tr>
+<td>&#x2662;</td>
+<td><input type="checkbox" id="exc_d1" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d2" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d3" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d4" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d5" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d6" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d7" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d8" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d9" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_d10" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_dJ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_dQ" onclick="togActEx();"/></td>
+<td><input type="checkbox" id="exc_dK" onclick="togActEx();"/></td>
+</tr>
+</table>
+Red Joker: <input type="checkbox" id="exc_jr" onclick="togActEx();"/><br/>
+Black Joker: <input type="checkbox" id="exc_jb" onclick="togActEx();"/><br/>
+<textarea id="exres"></textarea>
+</div>
+<hr/>
+<button onclick="genDeck();">Generate new random deck</button><br/>
+<textarea id="gened" cols="80" rows="8"></textarea><br/>
+<button onclick="updateDeck();">Update deck with input</button>
+<hr/>
+<p>Number of cards left: <span id="nb-cds">??</span></p>
+<div id="drc" class="cdg">
+<div>Drawn cards:<br/><button onclick="drawCard();">Draw a card</button></div>
+</div>
+<div id="hand" class="cdg">
+<div>Current hand:</div>
+</div>
+<div id="ddis" class="cdg">
+<div>Discarded cards:<br/><button onclick="shuffle();">Shuffle</button></div>
+</div>
+</body>
+</html>
